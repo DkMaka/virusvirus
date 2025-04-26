@@ -1,0 +1,17 @@
+{
+  "44d88612fea8a8f36de82e1278abb02f": {
+    "threat_name": "Eicar.Test.File",
+    "severity": "low",
+    "description": "EICAR test file"
+  },
+  "275a021bbfb6489e54d471899f7db9d1": {
+    "threat_name": "Malware.Example.1",
+    "severity": "medium",
+    "description": "Example malware signature"
+  },
+  "3f786850e387550fdab836ed7e6dc881": {
+    "threat_name": "Malware.Example.2",
+    "severity": "high",
+    "description": "Example malware signature 2"
+  }
+}

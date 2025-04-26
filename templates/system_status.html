@@ -1,0 +1,396 @@
+{% extends "layout.html" %}
+
+{% block title %}Virus Scanner - System Status{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card bg-dark">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2><i class="bi bi-pc-display me-2"></i>System Status</h2>
+                <button id="refresh-status" class="btn btn-outline-info btn-sm">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- CPU Usage -->
+                    <div class="col-md-4">
+                        <div class="card bg-dark border-primary mb-4">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">CPU Usage</h5>
+                                <div class="position-relative">
+                                    <canvas id="cpuChart" width="200" height="200"></canvas>
+                                    <div class="position-absolute top-50 start-50 translate-middle">
+                                        <h2 id="cpu-percentage">{{ status.cpu.usage_percent }}%</h2>
+                                    </div>
+                                </div>
+                                <div class="mt-3 text-start">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">CPU Cores:</span>
+                                        <span id="cpu-cores">{{ status.cpu.count }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Frequency:</span>
+                                        <span id="cpu-frequency">{{ status.cpu.frequency_mhz|round|int if status.cpu.frequency_mhz else 'N/A' }} MHz</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Memory Usage -->
+                    <div class="col-md-4">
+                        <div class="card bg-dark border-success mb-4">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Memory Usage</h5>
+                                <div class="position-relative">
+                                    <canvas id="memoryChart" width="200" height="200"></canvas>
+                                    <div class="position-absolute top-50 start-50 translate-middle">
+                                        <h2 id="memory-percentage">{{ status.memory.percent }}%</h2>
+                                    </div>
+                                </div>
+                                <div class="mt-3 text-start">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Total:</span>
+                                        <span id="memory-total">{{ status.memory.total_gb|round(1) }} GB</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Used:</span>
+                                        <span id="memory-used">{{ status.memory.used_gb|round(1) }} GB</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Disk Usage -->
+                    <div class="col-md-4">
+                        <div class="card bg-dark border-warning mb-4">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Disk Usage</h5>
+                                <div class="position-relative">
+                                    <canvas id="diskChart" width="200" height="200"></canvas>
+                                    <div class="position-absolute top-50 start-50 translate-middle">
+                                        <h2 id="disk-percentage">{{ status.disks[0].percent if status.disks else 'N/A' }}%</h2>
+                                    </div>
+                                </div>
+                                <div class="mt-3 text-start">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Total:</span>
+                                        <span id="disk-total">{{ status.disks[0].total_gb|round(1) if status.disks else 'N/A' }} GB</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Used:</span>
+                                        <span id="disk-used">{{ status.disks[0].used_gb|round(1) if status.disks else 'N/A' }} GB</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- System Information -->
+                <div class="card bg-dark border-info mb-4">
+                    <div class="card-header">
+                        <h5><i class="bi bi-info-circle me-2"></i>System Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <table class="table table-dark table-borderless">
+                                    <tbody>
+                                        <tr>
+                                            <td class="text-muted">Operating System:</td>
+                                            <td id="system-os">{{ status.system.system }} {{ status.system.release }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Version:</td>
+                                            <td id="system-version">{{ status.system.version }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Architecture:</td>
+                                            <td id="system-arch">{{ status.system.machine }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <table class="table table-dark table-borderless">
+                                    <tbody>
+                                        <tr>
+                                            <td class="text-muted">Processor:</td>
+                                            <td id="system-processor">{{ status.system.processor }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Boot Time:</td>
+                                            <td id="system-boot-time">{{ status.system.boot_time }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Last Updated:</td>
+                                            <td id="system-last-updated">{{ status.timestamp }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Running Processes -->
+                <div class="card bg-dark border-secondary mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="bi bi-activity me-2"></i>Running Processes</h5>
+                        <span class="badge bg-secondary" id="process-count">{{ status.processes.total }} processes</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>PID</th>
+                                        <th>Name</th>
+                                        <th>User</th>
+                                        <th>CPU %</th>
+                                        <th>Memory %</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="process-table">
+                                    {% for proc in status.processes.top_processes %}
+                                    <tr {% if proc.name in status.processes.suspicious_processes|map(attribute='name') %}class="table-warning text-dark"{% endif %}>
+                                        <td>{{ proc.pid }}</td>
+                                        <td>{{ proc.name }}</td>
+                                        <td>{{ proc.username }}</td>
+                                        <td>{{ proc.cpu_percent|round(1) }}%</td>
+                                        <td>{{ proc.memory_percent|round(1) }}%</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Network Information -->
+                <div class="card bg-dark border-primary">
+                    <div class="card-header">
+                        <h5><i class="bi bi-globe me-2"></i>Network Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card bg-dark border-secondary mb-3">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Network Traffic</h6>
+                                        <div class="d-flex justify-content-between">
+                                            <span class="text-muted">Sent:</span>
+                                            <span id="network-sent">{{ (status.network.bytes_sent / (1024*1024))|round(2) }} MB</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <span class="text-muted">Received:</span>
+                                            <span id="network-received">{{ (status.network.bytes_recv / (1024*1024))|round(2) }} MB</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card bg-dark border-secondary">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Connections</h6>
+                                        <div class="d-flex justify-content-between">
+                                            <span class="text-muted">Active Connections:</span>
+                                            <span id="network-connections">{{ status.network.total_connections }}</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <span class="text-muted">Suspicious:</span>
+                                            <span id="network-suspicious">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // CPU Chart
+        const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+        const cpuChart = new Chart(cpuCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Used', 'Free'],
+                datasets: [{
+                    data: [{{ status.cpu.usage_percent }}, {{ 100 - status.cpu.usage_percent }}],
+                    backgroundColor: [
+                        'rgba(13, 110, 253, 0.7)', // blue
+                        'rgba(33, 37, 41, 0.3)'    // dark
+                    ],
+                    borderColor: [
+                        'rgba(13, 110, 253, 1)',
+                        'rgba(33, 37, 41, 0.5)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+        // Memory Chart
+        const memoryCtx = document.getElementById('memoryChart').getContext('2d');
+        const memoryChart = new Chart(memoryCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Used', 'Free'],
+                datasets: [{
+                    data: [{{ status.memory.percent }}, {{ 100 - status.memory.percent }}],
+                    backgroundColor: [
+                        'rgba(25, 135, 84, 0.7)', // green
+                        'rgba(33, 37, 41, 0.3)'   // dark
+                    ],
+                    borderColor: [
+                        'rgba(25, 135, 84, 1)',
+                        'rgba(33, 37, 41, 0.5)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+        // Disk Chart
+        const diskCtx = document.getElementById('diskChart').getContext('2d');
+        const diskChart = new Chart(diskCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Used', 'Free'],
+                datasets: [{
+                    data: [
+                        {{ status.disks[0].percent if status.disks else 0 }}, 
+                        {{ 100 - status.disks[0].percent if status.disks else 100 }}
+                    ],
+                    backgroundColor: [
+                        'rgba(255, 193, 7, 0.7)', // yellow
+                        'rgba(33, 37, 41, 0.3)'   // dark
+                    ],
+                    borderColor: [
+                        'rgba(255, 193, 7, 1)',
+                        'rgba(33, 37, 41, 0.5)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+        // Refresh system status
+        document.getElementById('refresh-status').addEventListener('click', function() {
+            fetch('/api/system-status')
+                .then(response => response.json())
+                .then(data => {
+                    // Update CPU
+                    document.getElementById('cpu-percentage').textContent = data.cpu.usage_percent + '%';
+                    document.getElementById('cpu-cores').textContent = data.cpu.count;
+                    document.getElementById('cpu-frequency').textContent = 
+                        (data.cpu.frequency_mhz ? Math.round(data.cpu.frequency_mhz) : 'N/A') + ' MHz';
+                    
+                    // Update CPU chart
+                    cpuChart.data.datasets[0].data = [data.cpu.usage_percent, 100 - data.cpu.usage_percent];
+                    cpuChart.update();
+                    
+                    // Update Memory
+                    document.getElementById('memory-percentage').textContent = data.memory.percent + '%';
+                    document.getElementById('memory-total').textContent = data.memory.total_gb.toFixed(1) + ' GB';
+                    document.getElementById('memory-used').textContent = data.memory.used_gb.toFixed(1) + ' GB';
+                    
+                    // Update Memory chart
+                    memoryChart.data.datasets[0].data = [data.memory.percent, 100 - data.memory.percent];
+                    memoryChart.update();
+                    
+                    // Update Disk
+                    if (data.disks && data.disks.length > 0) {
+                        document.getElementById('disk-percentage').textContent = data.disks[0].percent + '%';
+                        document.getElementById('disk-total').textContent = data.disks[0].total_gb.toFixed(1) + ' GB';
+                        document.getElementById('disk-used').textContent = data.disks[0].used_gb.toFixed(1) + ' GB';
+                        
+                        // Update Disk chart
+                        diskChart.data.datasets[0].data = [data.disks[0].percent, 100 - data.disks[0].percent];
+                        diskChart.update();
+                    }
+                    
+                    // Update system info
+                    document.getElementById('system-os').textContent = data.system.system + ' ' + data.system.release;
+                    document.getElementById('system-version').textContent = data.system.version;
+                    document.getElementById('system-arch').textContent = data.system.machine;
+                    document.getElementById('system-processor').textContent = data.system.processor;
+                    document.getElementById('system-boot-time').textContent = data.system.boot_time;
+                    document.getElementById('system-last-updated').textContent = data.timestamp;
+                    
+                    // Update process info
+                    document.getElementById('process-count').textContent = data.processes.total + ' processes';
+                    
+                    // Update process table
+                    const processTable = document.getElementById('process-table');
+                    processTable.innerHTML = '';
+                    
+                    data.processes.top_processes.forEach(proc => {
+                        const suspiciousProcess = data.processes.suspicious_processes.find(p => p.name === proc.name);
+                        const row = document.createElement('tr');
+                        
+                        if (suspiciousProcess) {
+                            row.classList.add('table-warning', 'text-dark');
+                        }
+                        
+                        row.innerHTML = `
+                            <td>${proc.pid}</td>
+                            <td>${proc.name}</td>
+                            <td>${proc.username}</td>
+                            <td>${proc.cpu_percent.toFixed(1)}%</td>
+                            <td>${proc.memory_percent.toFixed(1)}%</td>
+                        `;
+                        
+                        processTable.appendChild(row);
+                    });
+                    
+                    // Update network info
+                    document.getElementById('network-sent').textContent = 
+                        (data.network.bytes_sent / (1024 * 1024)).toFixed(2) + ' MB';
+                    document.getElementById('network-received').textContent = 
+                        (data.network.bytes_recv / (1024 * 1024)).toFixed(2) + ' MB';
+                    document.getElementById('network-connections').textContent = data.network.total_connections;
+                })
+                .catch(error => {
+                    console.error('Error fetching system status:', error);
+                    alert('Error refreshing system status. Please try again.');
+                });
+        });
+    });
+</script>
+{% endblock %}

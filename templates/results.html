@@ -1,0 +1,159 @@
+{% extends "layout.html" %}
+
+{% block title %}Virus Scanner - Scan Results{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card bg-dark">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2>
+                    {% if scan_result.threats_found > 0 %}
+                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                    {% else %}
+                    <i class="bi bi-shield-check text-success me-2"></i>
+                    {% endif %}
+                    Scan Results
+                </h2>
+                <span class="badge bg-primary">{{ scan_result.scan_type|title }} Scan</span>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-dark text-center border-info h-100">
+                            <div class="card-body">
+                                <h3 class="display-4">{{ scan_result.files_scanned }}</h3>
+                                <p class="text-muted">Files Scanned</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card bg-dark text-center h-100 {% if scan_result.threats_found > 0 %}border-warning{% else %}border-success{% endif %}">
+                            <div class="card-body">
+                                <h3 class="display-4">{{ scan_result.threats_found }}</h3>
+                                <p class="text-muted">Threats Found</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card bg-dark text-center border-secondary h-100">
+                            <div class="card-body">
+                                <h3 class="display-4">{{ scan_result.completion_time|round(1) if scan_result.completion_time else 0.0 }}</h3>
+                                <p class="text-muted">Seconds</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card bg-dark text-center border-light h-100">
+                            <div class="card-body">
+                                <h3 class="display-4">{{ scan_result.scan_date.strftime('%d/%m') }}</h3>
+                                <p class="text-muted">{{ scan_result.scan_date.strftime('%Y') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert {% if scan_result.threats_found > 0 %}alert-warning{% else %}alert-success{% endif %}">
+                    {% if scan_result.threats_found > 0 %}
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>{{ scan_result.threats_found }} threat(s) detected!</strong> Review the details below and take action.
+                    {% else %}
+                    <i class="bi bi-shield-check me-2"></i>
+                    <strong>No threats found.</strong> Your system appears to be clean.
+                    {% endif %}
+                </div>
+                
+                {% if scan_result.threats_found > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover">
+                        <thead>
+                            <tr>
+                                <th scope="col">#</th>
+                                <th scope="col">Threat Type</th>
+                                <th scope="col">Threat Name</th>
+                                <th scope="col">File Path</th>
+                                <th scope="col">Detection Method</th>
+                                <th scope="col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for threat in threats %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ threat.threat_type }}</td>
+                                <td>{{ threat.threat_name }}</td>
+                                <td class="text-truncate" style="max-width: 200px;" title="{{ threat.file_path }}">
+                                    {{ threat.file_path }}
+                                </td>
+                                <td>{{ threat.detection_method|title }}</td>
+                                <td>
+                                    <div class="d-flex gap-2">
+                                        {% if not threat.quarantined and not threat.deleted %}
+                                        <form action="{{ url_for('quarantine') }}" method="post">
+                                            <input type="hidden" name="threat_id" value="{{ threat.id }}">
+                                            <input type="hidden" name="action" value="quarantine">
+                                            <button type="submit" class="btn btn-warning btn-sm">
+                                                <i class="bi bi-archive"></i> Quarantine
+                                            </button>
+                                        </form>
+                                        
+                                        <form action="{{ url_for('quarantine') }}" method="post">
+                                            <input type="hidden" name="threat_id" value="{{ threat.id }}">
+                                            <input type="hidden" name="action" value="delete">
+                                            <button type="submit" class="btn btn-danger btn-sm">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                        {% elif threat.quarantined %}
+                                        <span class="badge bg-warning text-dark">Quarantined</span>
+                                        {% elif threat.deleted %}
+                                        <span class="badge bg-danger">Deleted</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <form action="{{ url_for('quarantine') }}" method="post" id="quarantine-all-form">
+                        {% for threat in threats %}
+                        {% if not threat.quarantined and not threat.deleted %}
+                        <input type="hidden" name="threat_id" value="{{ threat.id }}">
+                        <input type="hidden" name="action" value="quarantine">
+                        {% endif %}
+                        {% endfor %}
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-archive me-2"></i>Quarantine All
+                        </button>
+                    </form>
+                    
+                    <a href="{{ url_for('scan') }}" class="btn btn-primary">
+                        <i class="bi bi-search me-2"></i>New Scan
+                    </a>
+                </div>
+                {% else %}
+                <div class="text-center my-5">
+                    <i class="bi bi-shield-check text-success" style="font-size: 5rem;"></i>
+                    <h3 class="mt-3">Your system is clean!</h3>
+                    <p class="text-muted">No threats were detected during this scan.</p>
+                    <a href="{{ url_for('scan') }}" class="btn btn-primary mt-3">
+                        <i class="bi bi-search me-2"></i>New Scan
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer text-muted">
+                <small>
+                    Scanned {{ scan_result.targets }} on {{ scan_result.scan_date.strftime('%Y-%m-%d %H:%M:%S') }}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

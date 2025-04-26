@@ -1,0 +1,205 @@
+{% extends "layout.html" %}
+
+{% block title %}Virus Scanner - Scan History{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card bg-dark">
+            <div class="card-header">
+                <h2><i class="bi bi-clock-history me-2"></i>Scan History</h2>
+            </div>
+            <div class="card-body">
+                {% if scans %}
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover">
+                        <thead>
+                            <tr>
+                                <th scope="col">Date</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Files Scanned</th>
+                                <th scope="col">Threats Found</th>
+                                <th scope="col">Duration</th>
+                                <th scope="col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for scan in scans %}
+                            <tr>
+                                <td>{{ scan.scan_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ scan.scan_type|title }}</td>
+                                <td>
+                                    {% if scan.status == 'completed' %}
+                                    <span class="badge bg-success">Completed</span>
+                                    {% elif scan.status == 'in_progress' %}
+                                    <span class="badge bg-primary">In Progress</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Failed</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ scan.files_scanned }}</td>
+                                <td>
+                                    {% if scan.threats_found > 0 %}
+                                    <span class="badge bg-warning text-dark">{{ scan.threats_found }}</span>
+                                    {% else %}
+                                    <span class="badge bg-success">{{ scan.threats_found }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ scan.completion_time|round(1) if scan.completion_time else '0.0' }} sec</td>
+                                <td>
+                                    <a href="{{ url_for('results', scan_id=scan.id) }}" class="btn btn-info btn-sm">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center my-5">
+                    <i class="bi bi-clock-history text-muted" style="font-size: 4rem;"></i>
+                    <h3 class="mt-3">No Scan History</h3>
+                    <p class="text-muted">You haven't performed any scans yet.</p>
+                    <a href="{{ url_for('scan') }}" class="btn btn-primary mt-3">
+                        <i class="bi bi-search me-2"></i>Start First Scan
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if scans %}
+        <div class="card bg-dark mt-4">
+            <div class="card-header">
+                <h4><i class="bi bi-graph-up me-2"></i>Scan Statistics</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <canvas id="threatChart" width="400" height="300"></canvas>
+                    </div>
+                    <div class="col-md-6">
+                        <canvas id="scanTypeChart" width="400" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if scans %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Prepare data for threat history chart
+        const scanDates = [{% for scan in scans[:10] %}'{{ scan.scan_date.strftime("%m/%d") }}'{% if not loop.last %}, {% endif %}{% endfor %}].reverse();
+        const threatCounts = [{% for scan in scans[:10] %}{{ scan.threats_found }}{% if not loop.last %}, {% endif %}{% endfor %}].reverse();
+        
+        // Create threat history chart
+        const threatCtx = document.getElementById('threatChart').getContext('2d');
+        new Chart(threatCtx, {
+            type: 'line',
+            data: {
+                labels: scanDates,
+                datasets: [{
+                    label: 'Threats Detected',
+                    data: threatCounts,
+                    backgroundColor: 'rgba(255, 193, 7, 0.2)',
+                    borderColor: 'rgba(255, 193, 7, 1)',
+                    borderWidth: 2,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Threats Detected History',
+                        color: '#fff'
+                    },
+                    legend: {
+                        labels: {
+                            color: '#fff'
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0,
+                            color: '#aaa'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#aaa'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Count scan types
+        const scanTypes = {};
+        {% for scan in scans %}
+            if ('{{ scan.scan_type }}' in scanTypes) {
+                scanTypes['{{ scan.scan_type }}']++;
+            } else {
+                scanTypes['{{ scan.scan_type }}'] = 1;
+            }
+        {% endfor %}
+        
+        // Create scan type distribution chart
+        const scanTypeCtx = document.getElementById('scanTypeChart').getContext('2d');
+        new Chart(scanTypeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(scanTypes).map(type => type.charAt(0).toUpperCase() + type.slice(1)),
+                datasets: [{
+                    data: Object.values(scanTypes),
+                    backgroundColor: [
+                        'rgba(13, 110, 253, 0.7)',  // blue
+                        'rgba(25, 135, 84, 0.7)',   // green
+                        'rgba(255, 193, 7, 0.7)'    // yellow
+                    ],
+                    borderColor: [
+                        'rgba(13, 110, 253, 1)',
+                        'rgba(25, 135, 84, 1)',
+                        'rgba(255, 193, 7, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Scan Type Distribution',
+                        color: '#fff'
+                    },
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#fff'
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endif %}
+{% endblock %}

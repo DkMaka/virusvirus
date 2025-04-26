@@ -1,0 +1,194 @@
+{% extends "layout.html" %}
+
+{% block title %}Virus Scanner - Scan{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card bg-dark">
+            <div class="card-header">
+                <h2><i class="bi bi-search me-2"></i>Scan System</h2>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('scan') }}" method="post" id="scan-form">
+                    <div class="mb-4">
+                        <label class="form-label h5">Select Scan Type</label>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="card bg-dark border-primary h-100">
+                                    <div class="card-body">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="scan_type" id="quick_scan" value="quick" checked>
+                                            <label class="form-check-label" for="quick_scan">
+                                                <h5><i class="bi bi-lightning-charge text-primary me-2"></i>Quick Scan</h5>
+                                            </label>
+                                        </div>
+                                        <p class="small text-muted mt-2">Scans common locations where malware typically hides. Takes 5-10 minutes.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="card bg-dark border-warning h-100">
+                                    <div class="card-body">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="scan_type" id="full_scan" value="full">
+                                            <label class="form-check-label" for="full_scan">
+                                                <h5><i class="bi bi-shield-check text-warning me-2"></i>Full Scan</h5>
+                                            </label>
+                                        </div>
+                                        <p class="small text-muted mt-2">Scans your entire system. May take several hours depending on system size.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="card bg-dark border-info h-100">
+                                    <div class="card-body">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="scan_type" id="custom_scan" value="custom">
+                                            <label class="form-check-label" for="custom_scan">
+                                                <h5><i class="bi bi-folder2-open text-info me-2"></i>Custom Scan</h5>
+                                            </label>
+                                        </div>
+                                        <p class="small text-muted mt-2">Scan a specific drive, folder or file of your choice.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4" id="custom-path-section" style="display: none;">
+                        <label for="target_path" class="form-label">Path to Scan</label>
+                        <input type="text" class="form-control" name="target_path" id="target_path" placeholder="/path/to/scan">
+                        <div class="form-text">Enter a valid path to scan such as /home/user or /var/www</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label h5">Scan Options</label>
+                        <div class="card bg-dark border-secondary">
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="scan_archives" name="scan_archives" value="1" checked>
+                                    <label class="form-check-label" for="scan_archives">
+                                        <i class="bi bi-file-earmark-zip me-2"></i>Scan archive files (zip, rar, etc.)
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="heuristic_analysis" name="heuristic_analysis" value="1" checked>
+                                    <label class="form-check-label" for="heuristic_analysis">
+                                        <i class="bi bi-graph-up me-2"></i>Use heuristic analysis
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="auto_quarantine" name="auto_quarantine" value="1">
+                                    <label class="form-check-label" for="auto_quarantine">
+                                        <i class="bi bi-archive me-2"></i>Auto-quarantine detected threats
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg" id="start-scan-btn">
+                            <i class="bi bi-search me-2"></i>Start Scan
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card bg-dark mt-4" id="scan-progress-card" style="display: none;">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4><i class="bi bi-activity me-2"></i>Scan in Progress</h4>
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-3" style="height: 25px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" id="scan-progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-file-earmark text-info me-2"></i>
+                            <div>
+                                <div class="small text-muted">Files Scanned</div>
+                                <div class="fw-bold" id="files-scanned-count">0</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                            <div>
+                                <div class="small text-muted">Threats Found</div>
+                                <div class="fw-bold" id="threats-found-count">0</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-clock text-secondary me-2"></i>
+                            <div>
+                                <div class="small text-muted">Elapsed Time</div>
+                                <div class="fw-bold" id="elapsed-time">00:00:00</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-secondary">
+                    <small>
+                        <i class="bi bi-info-circle me-2"></i>
+                        <span id="current-file-path">Initializing scan...</span>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Toggle custom path field based on scan type selection
+    document.querySelectorAll('input[name="scan_type"]').forEach(input => {
+        input.addEventListener('change', function() {
+            const customPathSection = document.getElementById('custom-path-section');
+            if (this.value === 'custom') {
+                customPathSection.style.display = 'block';
+            } else {
+                customPathSection.style.display = 'none';
+            }
+        });
+    });
+    
+    // Handle scan form submission
+    document.getElementById('scan-form').addEventListener('submit', function(e) {
+        // Show progress UI
+        document.getElementById('scan-progress-card').style.display = 'block';
+        
+        // Start timer
+        let startTime = new Date();
+        let timerInterval = setInterval(function() {
+            let now = new Date();
+            let elapsed = new Date(now - startTime);
+            let hours = String(elapsed.getUTCHours()).padStart(2, '0');
+            let minutes = String(elapsed.getUTCMinutes()).padStart(2, '0');
+            let seconds = String(elapsed.getUTCSeconds()).padStart(2, '0');
+            document.getElementById('elapsed-time').textContent = `${hours}:${minutes}:${seconds}`;
+        }, 1000);
+        
+        // We don't prevent default form submission, so the scan will start
+        // This is just to show the progress UI before redirecting
+    });
+</script>
+{% endblock %}

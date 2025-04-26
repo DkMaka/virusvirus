@@ -1,0 +1,14 @@
+﻿/* Custom styles for Virus Scanner */
+body {
+    background-color: #212529;
+    color: #f8f9fa;
+}
+
+.card {
+    border-color: #495057;
+}
+
+.card-header {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid #495057;
+}

@@ -1,5 +1,9 @@
-﻿flask
-flask-sqlalchemy
-gunicorn
-werkzeug
-sqlalchemy
+flask==2.0.1
+flask-sqlalchemy==2.5.1
+gunicorn==20.1.0
+werkzeug==2.0.1
+sqlalchemy==1.4.23
+click==8.0.1
+itsdangerous==2.0.1
+Jinja2==3.0.1
+MarkupSafe==2.0.1

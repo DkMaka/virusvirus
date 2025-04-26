@@ -1,0 +1,7 @@
+﻿# Add this near the top of your app.py file, after other imports
+try:
+    from test_routes import add_test_routes
+    # And add this after app initialization
+    add_test_routes(app)
+except ImportError:
+    print("Optional test routes not imported")

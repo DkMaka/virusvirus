@@ -1,1 +1,1 @@
-web: gunicorn app:app --log-file -
+web: gunicorn --workers=2 --threads=2 --bind 0.0.0.0:5000 app:app
